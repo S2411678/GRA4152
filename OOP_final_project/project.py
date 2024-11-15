@@ -6,48 +6,15 @@ from scipy.optimize import minimize
 import argparse
 import textwrap
 
-# create help for GLM superclass and subclasses
-parser = argparse.ArgumentParser(
-    prog = 'GLM superclass and subclasses',
-    formatter_class = argparse.RawDescriptionHelpFormatter,
-    description = textwrap.dedent('''\
-            GLM Superclass
-        --------------------------------
-        A simulated unified class of models for regression analysis of independent
-        observations of a discrete or continuous response : Normal, Bernoulli, and Poisson
-
-        Abstract methods: 
-        Implementation of abstract methods specified in each subclass
-
-        1) ne_loglik: defines the negative log-likelihood function, essential for model fitting 
-
-        2) predict: return the expected value of dependent variable Y                              
-
-        Concrete methods:
-        1) mle: estimate parameter beta of the model by maximizing log-likelihood function
-
-        2) params (@property): an accessor method which retrieves the parameter beta
-        '''),
-    epilog = textwrap.dedent('''\
-            Usage Example
-        --------------------------------
-        model = Normal(X,Y) # initialize an object
-        model.mle() # fit the model
-        model.params # access beta values
-        model.predict(X) # return expected value of Y
-        ''')
-)
-
-
 class DataLoader:
 
     def load_data(self):
         raise NotImplementedError    
         
     def split(self, xcolumns, ycolumn):
-        # define the x and y columns
-        # self._data loaded after load_data method
-        # hence self._data should be defined in subclass
+        # select X and Y columns
+        # self._data obtained after succesful implementation of load_data method
+        # hence self._data should be initialized in subclass
         # avoid creating empty instance variable
         # if X contains many columns then xcolumns must be provided as a list                
         self._y = self._data[ycolumn]
@@ -66,19 +33,17 @@ class DataLoader:
         return self._y        
     
     def add_const(self):
-        # using built-in add_constant in statsmodels
-        # alter name to distinguish with built-in function
+        # name to distinguish with built-in function add_constant in statsmodels
         assert 'const' not in self._x.columns, "Already add_constant"
         self._x = sm.add_constant(self._x)
         return self._x         
     
     def xtranspose(self):
-        # this coule be achieved by transpose method in numpy
-        # alter name to distinguish with built-in method
+        # name to distinguish with built-in function transpose
         return self._x.transpose()
     
 class rDataLoader(DataLoader):
-# fetch dataset from R repository datasets
+# fetch dataset from R repository
 
     def __init__(self, package, dataset):        
         self._package = package
@@ -124,20 +89,50 @@ class iDataLoader(DataLoader):
         self._url = url
 
     def load_data(self):
-        # some csv file online use 'tab' or ';' to seperate data columns        
+        # some .csv data online use 'tab' or ';' to seperate data columns        
         # data will be read into one column
         # Example: https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv
         # hence several options for handling different separators
         # usually read_csv use C engine 
         # but since multiple separators are specified
         # engine = python is required to read data
-        # however this will reduce the speed of parse data
-        # trade off between simplicity, time efficiency and automatic
         try:
             self._data = pd.read_csv(self._url, sep=r'\,|\t|\;', engine='python')
             print(self._data.info()) # summary dataset
         except Exception as e:
             print(e)
+
+# create docstring for GLM superclass and subclasses
+parser = argparse.ArgumentParser(
+    prog = 'GLM superclass and subclasses',
+    formatter_class = argparse.RawDescriptionHelpFormatter,
+    description = textwrap.dedent('''\
+            GLM Superclass
+        --------------------------------
+        A simulated unified class of models for regression analysis of independent
+        observations of a discrete or continuous response : Normal, Bernoulli, and Poisson
+
+        Abstract methods: 
+        Implementation of abstract methods specified in each subclass
+
+        1) ne_loglik: defines the negative log-likelihood function, essential for model fitting 
+
+        2) predict: return the expected value of dependent variable Y                              
+
+        Concrete methods:
+        1) mle: estimate parameter beta of the model by maximizing log-likelihood function
+
+        2) params (@property): an accessor method which retrieves the parameter beta
+        '''),
+    epilog = textwrap.dedent('''\
+            Usage Example
+        --------------------------------
+        model = Normal(X,Y) # initialize an object
+        model.mle() # fit the model
+        model.params # access beta values
+        model.predict(X) # return expected value of Y
+        ''')
+)
 
 class GLM:
 
@@ -154,7 +149,7 @@ class GLM:
         raise NotImplementedError 
 
     def mle(self): 
-        # same responsibility as 'fit' in statsmodel
+        # same responsibility as 'fit' in statsmodels
         num_params = self._x.shape[1]
         init_params = np.repeat(0.1, num_params)
         results = minimize(self.ne_loglik, init_params, args = (self._x, self._y))
@@ -215,6 +210,6 @@ class Poisson(GLM):
         eta = x_new @ self._params
         mu = np.exp(eta)
         return mu
-    
-if __name__ == "__main__":
+
+if __name__ == "__main__":   
     args = parser.parse_args()
